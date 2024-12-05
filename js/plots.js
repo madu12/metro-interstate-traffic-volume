@@ -9,42 +9,81 @@ const tooltip = d3
   .attr("class", "tooltip")
   .style("opacity", 0);
 
-// Declare a global variable for data
-let data;
+// Declare global variables for data
+let csvData = null;
+let jsonData = null;
 
-// Load CSV data
-d3.csv(
-  "https://raw.githubusercontent.com/madu12/metro-interstate-traffic-volume/refs/heads/main/output_data.csv"
-).then((loadedData) => {
-  // Parse the data
-  data = loadedData.map((d) => ({
-    traffic_volume: +d.traffic_volume,
-    temp: +d.temp,
-    rain_1h: +d.rain_1h,
-    snow_1h: +d.snow_1h,
-    clouds_all: +d.clouds_all,
-    holiday_indexed: +d.holiday_indexed,
-    date_time: new Date(d.date_time),
-  }));
+// Function to load CSV data
+function loadCSVData(callback) {
+  if (csvData) {
+    callback(csvData);
+  } else {
+    d3.csv(
+      "https://raw.githubusercontent.com/madu12/metro-interstate-traffic-volume/refs/heads/main/output_data.csv"
+    ).then((loadedData) => {
+      csvData = loadedData.map((d) => ({
+        traffic_volume: +d.traffic_volume,
+        temp: +d.temp,
+        rain_1h: +d.rain_1h,
+        snow_1h: +d.snow_1h,
+        clouds_all: +d.clouds_all,
+        holiday_indexed: +d.holiday_indexed,
+        date_time: new Date(d.date_time),
+      }));
+      callback(csvData);
+    });
+  }
+}
 
-  // Initial render
-  renderHistogram("traffic_volume");
-  renderScatter("temp");
-  renderTimeSeries();
-  renderSunburst();
+// Function to load JSON data
+function loadJSONData(callback) {
+  if (jsonData) {
+    callback(jsonData);
+  } else {
+    d3.json(
+      "https://raw.githubusercontent.com/madu12/metro-interstate-traffic-volume/refs/heads/main/hierarchical_traffic_data.json"
+    ).then((loadedData) => {
+      jsonData = loadedData;
+      callback(jsonData);
+    });
+  }
+}
 
-  // Update charts on dropdown change
-  d3.select("#histogram-variable-select").on("change", function () {
-    renderHistogram(d3.select(this).property("value"));
+document.addEventListener("DOMContentLoaded", () => {
+  // Initial render for the first tab (Histogram)
+  loadCSVData((data) => renderHistogram("traffic_volume", data));
+
+  // Set up tab-based loading
+  document.querySelectorAll('button[data-bs-toggle="tab"]').forEach((tab) => {
+    tab.addEventListener("shown.bs.tab", (event) => {
+      const targetTab = event.target.id;
+      if (targetTab === "histogram-tab") {
+        loadCSVData((data) => renderHistogram("traffic_volume", data));
+      } else if (targetTab === "scatter-tab") {
+        loadCSVData((data) => renderScatter("temp", data));
+      } else if (targetTab === "time-series-tab") {
+        loadCSVData((data) => renderTimeSeries(data));
+      } else if (targetTab === "sunburst-tab") {
+        loadJSONData((data) => renderSunburst(data));
+      }
+    });
   });
 
+  // Dropdown change for Histogram
+  d3.select("#histogram-variable-select").on("change", function () {
+    const selectedVariable = d3.select(this).property("value");
+    loadCSVData((data) => renderHistogram(selectedVariable, data));
+  });
+
+  // Dropdown change for Scatter Plot
   d3.select("#scatter-x-select").on("change", function () {
-    renderScatter(d3.select(this).property("value"));
+    const selectedVariable = d3.select(this).property("value");
+    loadCSVData((data) => renderScatter(selectedVariable, data));
   });
 });
 
 // Function to render the histogram
-function renderHistogram(variable) {
+function renderHistogram(variable, data) {
   d3.select("#histogram").html("");
   const dropdownText = d3
     .select("#histogram-variable-select option:checked")
@@ -106,7 +145,7 @@ function renderHistogram(variable) {
 }
 
 // Function to render the scatter plot
-function renderScatter(xVariable) {
+function renderScatter(xVariable, data) {
   d3.select("#scatter").html("");
   const dropdownText = d3.select("#scatter-x-select option:checked").text();
   d3.select("#scatter-title").text(
@@ -123,7 +162,6 @@ function renderScatter(xVariable) {
     .scaleLinear()
     .domain(d3.extent(data, (d) => d[xVariable]))
     .range([margin.left, width - margin.right]);
-
   const y = d3
     .scaleLinear()
     .domain(d3.extent(data, (d) => d.traffic_volume))
@@ -133,7 +171,6 @@ function renderScatter(xVariable) {
     .append("g")
     .attr("transform", `translate(0,${height - margin.bottom})`)
     .call(d3.axisBottom(x));
-
   svg
     .append("g")
     .attr("transform", `translate(${margin.left},0)`)
@@ -163,7 +200,7 @@ function renderScatter(xVariable) {
 }
 
 // Function to render the time series plot
-function renderTimeSeries() {
+function renderTimeSeries(data) {
   const aggregatedData = d3.rollup(
     data,
     (v) => d3.sum(v, (d) => d.traffic_volume),
@@ -223,12 +260,6 @@ function renderTimeSeries() {
     .attr("stroke-width", 1.5)
     .attr("d", line);
 
-  const tooltip = d3
-    .select("body")
-    .append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
-
   svg
     .selectAll("circle")
     .data(dailyData)
@@ -261,7 +292,7 @@ function renderTimeSeries() {
 }
 
 // Function to render the Sunburst plot
-function renderSunburst() {
+function renderSunburst(data) {
   const radius = width / 10;
 
   const arc = d3
@@ -275,158 +306,152 @@ function renderSunburst() {
 
   const color = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, 10));
 
-  d3.json(
-    "https://raw.githubusercontent.com/madu12/metro-interstate-traffic-volume/refs/heads/main/hierarchical_traffic_data.json"
-  ).then((data) => {
-    const format = d3.format(",d");
+  const format = d3.format(",d");
 
-    const partition = (data) => {
-      const root = d3
-        .hierarchy(data)
-        .sum((d) => d.size)
-        .sort((a, b) => b.value - a.value);
-      return d3.partition().size([2 * Math.PI, root.height + 1])(root);
-    };
+  const partition = (data) => {
+    const root = d3
+      .hierarchy(data)
+      .sum((d) => d.size)
+      .sort((a, b) => b.value - a.value);
+    return d3.partition().size([2 * Math.PI, root.height + 1])(root);
+  };
 
-    const root = partition(data);
-    root.each((d) => (d.current = d));
+  const root = partition(data);
+  root.each((d) => (d.current = d));
 
-    const svg = d3
-      .select("#sunburst")
-      .append("svg")
-      .attr("viewBox", [0, 0, width, width * 0.7])
-      .style("font", "8px sans-serif");
+  const svg = d3
+    .select("#sunburst")
+    .append("svg")
+    .attr("viewBox", [0, 0, width, width * 0.7])
+    .style("font", "8px sans-serif");
 
-    const g = svg.append("g").attr("transform", `translate(${width / 2},300)`);
+  const g = svg.append("g").attr("transform", `translate(${width / 2},300)`);
 
-    const path = g
-      .append("g")
-      .selectAll("path")
-      .data(root.descendants().slice(1))
-      .join("path")
-      .attr("fill", (d) => {
-        while (d.depth > 1) d = d.parent;
-        return color(d.data.name);
-      })
-      .attr("fill-opacity", (d) =>
-        arcVisible(d.current) ? (d.children ? 0.6 : 0.4) : 0
-      )
-      .attr("d", (d) => arc(d.current))
-      .on("mouseover", mouseover)
-      .on("mouseout", mouseleave);
+  const path = g
+    .append("g")
+    .selectAll("path")
+    .data(root.descendants().slice(1))
+    .join("path")
+    .attr("fill", (d) => {
+      while (d.depth > 1) d = d.parent;
+      return color(d.data.name);
+    })
+    .attr("fill-opacity", (d) =>
+      arcVisible(d.current) ? (d.children ? 0.6 : 0.4) : 0
+    )
+    .attr("d", (d) => arc(d.current))
+    .on("mouseover", mouseover)
+    .on("mouseout", mouseleave);
+
+  path
+    .filter((d) => d.children)
+    .style("cursor", "pointer")
+    .on("click", clicked);
+
+  const label = g
+    .append("g")
+    .attr("pointer-events", "none")
+    .attr("text-anchor", "middle")
+    .style("user-select", "none")
+    .selectAll("text")
+    .data(root.descendants().slice(1))
+    .join("text")
+    .attr("dy", "0.35em")
+    .attr("fill-opacity", (d) => +labelVisible(d.current))
+    .attr("transform", (d) => labelTransform(d.current))
+    .text((d) => d.data.name);
+
+  const parent = g
+    .append("circle")
+    .datum(root)
+    .attr("r", radius)
+    .attr("fill", "none")
+    .attr("pointer-events", "all")
+    .on("click", clicked);
+
+  function clicked(event, p) {
+    parent.datum(p.parent || root);
+
+    root.each(
+      (d) =>
+        (d.target = {
+          x0:
+            Math.max(0, Math.min(1, (d.x0 - p.x0) / (p.x1 - p.x0))) *
+            2 *
+            Math.PI,
+          x1:
+            Math.max(0, Math.min(1, (d.x1 - p.x0) / (p.x1 - p.x0))) *
+            2 *
+            Math.PI,
+          y0: Math.max(0, d.y0 - p.depth),
+          y1: Math.max(0, d.y1 - p.depth),
+        })
+    );
+
+    const t = g.transition().duration(750);
 
     path
-      .filter((d) => d.children)
-      .style("cursor", "pointer")
-      .on("click", clicked);
+      .transition(t)
+      .tween("data", (d) => {
+        const i = d3.interpolate(d.current, d.target);
+        return (t) => (d.current = i(t));
+      })
+      .filter(function (d) {
+        return +this.getAttribute("fill-opacity") || arcVisible(d.target);
+      })
+      .attr("fill-opacity", (d) =>
+        arcVisible(d.target) ? (d.children ? 0.6 : 0.4) : 0
+      )
+      .attrTween("d", (d) => () => arc(d.current));
 
-    const label = g
-      .append("g")
-      .attr("pointer-events", "none")
-      .attr("text-anchor", "middle")
-      .style("user-select", "none")
-      .selectAll("text")
-      .data(root.descendants().slice(1))
-      .join("text")
-      .attr("dy", "0.35em")
-      .attr("fill-opacity", (d) => +labelVisible(d.current))
-      .attr("transform", (d) => labelTransform(d.current))
-      .text((d) => d.data.name);
+    label
+      .filter(function (d) {
+        return +this.getAttribute("fill-opacity") || labelVisible(d.target);
+      })
+      .transition(t)
+      .attr("fill-opacity", (d) => +labelVisible(d.target))
+      .attrTween("transform", (d) => () => labelTransform(d.current));
+  }
 
-    const parent = g
-      .append("circle")
-      .datum(root)
-      .attr("r", radius)
-      .attr("fill", "none")
-      .attr("pointer-events", "all")
-      .on("click", clicked);
+  function mouseover(event, d) {
+    if (
+      (d.depth === 1 && arcVisible(d.current)) ||
+      (d.depth === 2 && arcVisible(d.current)) ||
+      (d.depth === 3 && arcVisible(d.current))
+    ) {
+      tooltip
+        .style("visibility", "visible")
+        .style("opacity", 1)
+        .style("top", `${event.pageY}px`)
+        .style("left", `${event.pageX}px`)
+        .html(`<strong>${d.data.name}</strong><br>Value: ${format(d.value)}`);
 
-    const tooltip = d3.select("body").append("div").attr("class", "tooltip");
+      const sequenceArray = d.ancestors().reverse();
+      sequenceArray.shift();
 
-    function clicked(event, p) {
-      parent.datum(p.parent || root);
-
-      root.each(
-        (d) =>
-          (d.target = {
-            x0:
-              Math.max(0, Math.min(1, (d.x0 - p.x0) / (p.x1 - p.x0))) *
-              2 *
-              Math.PI,
-            x1:
-              Math.max(0, Math.min(1, (d.x1 - p.x0) / (p.x1 - p.x0))) *
-              2 *
-              Math.PI,
-            y0: Math.max(0, d.y0 - p.depth),
-            y1: Math.max(0, d.y1 - p.depth),
-          })
-      );
-
-      const t = g.transition().duration(750);
-
-      path
-        .transition(t)
-        .tween("data", (d) => {
-          const i = d3.interpolate(d.current, d.target);
-          return (t) => (d.current = i(t));
-        })
-        .filter(function (d) {
-          return +this.getAttribute("fill-opacity") || arcVisible(d.target);
-        })
-        .attr("fill-opacity", (d) =>
-          arcVisible(d.target) ? (d.children ? 0.6 : 0.4) : 0
-        )
-        .attrTween("d", (d) => () => arc(d.current));
-
-      label
-        .filter(function (d) {
-          return +this.getAttribute("fill-opacity") || labelVisible(d.target);
-        })
-        .transition(t)
-        .attr("fill-opacity", (d) => +labelVisible(d.target))
-        .attrTween("transform", (d) => () => labelTransform(d.current));
+      d3.selectAll("path").style("opacity", 0.3);
+      g.selectAll("path")
+        .filter((node) => sequenceArray.indexOf(node) >= 0)
+        .style("opacity", 1);
     }
+  }
 
-    function mouseover(event, d) {
-      if (
-        (d.depth === 1 && arcVisible(d.current)) ||
-        (d.depth === 2 && arcVisible(d.current)) ||
-        (d.depth === 3 && arcVisible(d.current))
-      ) {
-        tooltip
-          .style("visibility", "visible")
-          .style("opacity", 1)
-          .style("top", `${event.pageY}px`)
-          .style("left", `${event.pageX}px`)
-          .html(`<strong>${d.data.name}</strong><br>Value: ${format(d.value)}`);
+  function mouseleave() {
+    tooltip.style("visibility", "hidden");
+    d3.selectAll("path").style("opacity", 1);
+  }
 
-        const sequenceArray = d.ancestors().reverse();
-        sequenceArray.shift();
+  function arcVisible(d) {
+    return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
+  }
 
-        d3.selectAll("path").style("opacity", 0.3);
-        g.selectAll("path")
-          .filter((node) => sequenceArray.indexOf(node) >= 0)
-          .style("opacity", 1);
-      }
-    }
+  function labelVisible(d) {
+    return d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03;
+  }
 
-    function mouseleave() {
-      tooltip.style("visibility", "hidden");
-      d3.selectAll("path").style("opacity", 1);
-    }
-
-    function arcVisible(d) {
-      return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
-    }
-
-    function labelVisible(d) {
-      return d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03;
-    }
-
-    function labelTransform(d) {
-      const x = ((d.x0 + d.x1) / 2) * (180 / Math.PI);
-      const y = ((d.y0 + d.y1) / 2) * radius;
-      return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
-    }
-  });
+  function labelTransform(d) {
+    const x = ((d.x0 + d.x1) / 2) * (180 / Math.PI);
+    const y = ((d.y0 + d.y1) / 2) * radius;
+    return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
+  }
 }
