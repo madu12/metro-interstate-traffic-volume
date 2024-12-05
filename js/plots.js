@@ -13,6 +13,66 @@ const tooltip = d3
 let csvData = null;
 let jsonData = null;
 
+// Descriptions stored in a JSON-like object
+const plotDescriptions = {
+  histogram: {
+      default: "This histogram shows the distribution of the selected traffic-related variable.",
+      variables: {
+          traffic_volume: "This histogram shows the distribution of traffic volume recorded over time.",
+          temp: "This histogram shows how temperature variations affect traffic volume.",
+          rain_1h: "This histogram illustrates the impact of hourly rainfall on traffic patterns.",
+          snow_1h: "This histogram highlights the influence of snowfall on traffic volume.",
+          clouds_all: "This histogram displays traffic volume variations based on cloud cover percentage."
+      }
+  },
+  scatter: {
+      default: "This scatter plot shows the relationship between traffic volume and a selected variable.",
+      variables: {
+          temp: "This scatter plot shows the relationship between temperature and traffic volume.",
+          rain_1h: "This scatter plot illustrates how hourly rainfall affects traffic volume.",
+          snow_1h: "This scatter plot shows the impact of snowfall on traffic volume.",
+          clouds_all: "This scatter plot demonstrates the relationship between cloud cover and traffic volume."
+      }
+  },
+  time_series: {
+      default: "This time series plot shows the trend of daily traffic volume over time."
+  },
+  sunburst: {
+      default: "This sunburst chart breaks down traffic volume by year, month, and day."
+  }
+};
+
+// Function to dynamically create and update descriptions
+function createOrUpdateDescription(plotType, variable = null) {
+  let descriptionText = "";
+
+  if (plotType === "histogram" || plotType === "scatter") {
+      descriptionText = plotDescriptions[plotType].variables[variable] || plotDescriptions[plotType].default;
+  } else {
+      descriptionText = plotDescriptions[plotType].default;
+  }
+
+  // Check if container exists
+  const container = document.getElementById(`${plotType}-tab-content`);
+  if (!container) {
+      console.error(`Container with ID ${plotType}-tab-content not found.`);
+      return;
+  }
+
+  // Check if description element already exists
+  let descriptionElement = document.getElementById(`${plotType}-description`);
+  if (!descriptionElement) {
+      // Create the description element if it doesn't exist
+      descriptionElement = document.createElement("p");
+      descriptionElement.id = `${plotType}-description`;
+      descriptionElement.className = "text-center text-muted";
+      container.appendChild(descriptionElement);
+    }
+
+  // Update the description text
+  descriptionElement.textContent = descriptionText;
+}
+
 // Function to load CSV data
 function loadCSVData(callback) {
   if (csvData) {
@@ -50,6 +110,13 @@ function loadJSONData(callback) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+
+  // Initial description setup
+  createOrUpdateDescription("histogram", "traffic_volume");
+  createOrUpdateDescription("scatter", "temp");
+  createOrUpdateDescription("time_series");
+  createOrUpdateDescription("sunburst");
+
   // Initial render for the first tab (Histogram)
   loadCSVData((data) => renderHistogram("traffic_volume", data));
 
@@ -61,7 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadCSVData((data) => renderHistogram("traffic_volume", data));
       } else if (targetTab === "scatter-tab") {
         loadCSVData((data) => renderScatter("temp", data));
-      } else if (targetTab === "time-series-tab") {
+      } else if (targetTab === "time_series-tab") {
         loadCSVData((data) => renderTimeSeries(data));
       } else if (targetTab === "sunburst-tab") {
         loadJSONData((data) => renderSunburst(data));
@@ -73,12 +140,14 @@ document.addEventListener("DOMContentLoaded", () => {
   d3.select("#histogram-variable-select").on("change", function () {
     const selectedVariable = d3.select(this).property("value");
     loadCSVData((data) => renderHistogram(selectedVariable, data));
+    createOrUpdateDescription("histogram", selectedVariable);
   });
 
   // Dropdown change for Scatter Plot
   d3.select("#scatter-x-select").on("change", function () {
     const selectedVariable = d3.select(this).property("value");
     loadCSVData((data) => renderScatter(selectedVariable, data));
+    createOrUpdateDescription("scatter", selectedVariable);
   });
 });
 
@@ -212,7 +281,7 @@ function renderTimeSeries(data) {
     traffic_volume: value,
   }));
 
-  d3.select("#time-series").html("");
+  d3.select("#time_series").html("");
 
   const x = d3
     .scaleUtc()
@@ -231,7 +300,7 @@ function renderTimeSeries(data) {
     .y((d) => y(d.traffic_volume));
 
   const svg = d3
-    .select("#time-series")
+    .select("#time_series")
     .append("svg")
     .attr("width", width)
     .attr("height", height);
@@ -420,7 +489,6 @@ function renderSunburst(data) {
       (d.depth === 3 && arcVisible(d.current))
     ) {
       tooltip
-        .style("visibility", "visible")
         .style("opacity", 1)
         .style("top", `${event.pageY}px`)
         .style("left", `${event.pageX}px`)
@@ -437,7 +505,7 @@ function renderSunburst(data) {
   }
 
   function mouseleave() {
-    tooltip.style("visibility", "hidden");
+    tooltip.style("opacity", 0);
     d3.selectAll("path").style("opacity", 1);
   }
 
