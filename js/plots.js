@@ -16,30 +16,41 @@ let jsonData = null;
 // Descriptions stored in a JSON-like object
 const plotDescriptions = {
   histogram: {
-      default: "This histogram shows the distribution of the selected traffic-related variable.",
-      variables: {
-          traffic_volume: "This histogram shows the distribution of traffic volume recorded over time.",
-          temp: "This histogram shows how temperature variations affect traffic volume.",
-          rain_1h: "This histogram illustrates the impact of hourly rainfall on traffic patterns.",
-          snow_1h: "This histogram highlights the influence of snowfall on traffic volume.",
-          clouds_all: "This histogram displays traffic volume variations based on cloud cover percentage."
-      }
+    default:
+      "This histogram shows the distribution of the selected traffic-related variable.",
+    variables: {
+      traffic_volume:
+        "This histogram shows the distribution of traffic volume recorded over time.",
+      temp: "This histogram shows how temperature variations affect traffic volume.",
+      rain_1h:
+        "This histogram illustrates the impact of hourly rainfall on traffic patterns.",
+      snow_1h:
+        "This histogram highlights the influence of snowfall on traffic volume.",
+      clouds_all:
+        "This histogram displays traffic volume variations based on cloud cover percentage.",
+    },
   },
   scatter: {
-      default: "This scatter plot shows the relationship between traffic volume and a selected variable.",
-      variables: {
-          temp: "This scatter plot shows the relationship between temperature and traffic volume.",
-          rain_1h: "This scatter plot illustrates how hourly rainfall affects traffic volume.",
-          snow_1h: "This scatter plot shows the impact of snowfall on traffic volume.",
-          clouds_all: "This scatter plot demonstrates the relationship between cloud cover and traffic volume."
-      }
+    default:
+      "This scatter plot shows the relationship between traffic volume and a selected variable.",
+    variables: {
+      temp: "This scatter plot shows the relationship between temperature and traffic volume.",
+      rain_1h:
+        "This scatter plot illustrates how hourly rainfall affects traffic volume.",
+      snow_1h:
+        "This scatter plot shows the impact of snowfall on traffic volume.",
+      clouds_all:
+        "This scatter plot demonstrates the relationship between cloud cover and traffic volume.",
+    },
   },
   time_series: {
-      default: "This time series plot shows the trend of daily traffic volume over time."
+    default:
+      "This time series plot shows the trend of daily traffic volume over time.",
   },
   sunburst: {
-      default: "This sunburst chart breaks down traffic volume by year, month, and day."
-  }
+    default:
+      "This sunburst chart breaks down traffic volume by year, month, and day.",
+  },
 };
 
 // Function to dynamically create and update descriptions
@@ -47,27 +58,29 @@ function createOrUpdateDescription(plotType, variable = null) {
   let descriptionText = "";
 
   if (plotType === "histogram" || plotType === "scatter") {
-      descriptionText = plotDescriptions[plotType].variables[variable] || plotDescriptions[plotType].default;
+    descriptionText =
+      plotDescriptions[plotType].variables[variable] ||
+      plotDescriptions[plotType].default;
   } else {
-      descriptionText = plotDescriptions[plotType].default;
+    descriptionText = plotDescriptions[plotType].default;
   }
 
   // Check if container exists
   const container = document.getElementById(`${plotType}-tab-content`);
   if (!container) {
-      console.error(`Container with ID ${plotType}-tab-content not found.`);
-      return;
+    console.error(`Container with ID ${plotType}-tab-content not found.`);
+    return;
   }
 
   // Check if description element already exists
   let descriptionElement = document.getElementById(`${plotType}-description`);
   if (!descriptionElement) {
-      // Create the description element if it doesn't exist
-      descriptionElement = document.createElement("p");
-      descriptionElement.id = `${plotType}-description`;
-      descriptionElement.className = "text-center text-muted";
-      container.appendChild(descriptionElement);
-    }
+    // Create the description element if it doesn't exist
+    descriptionElement = document.createElement("p");
+    descriptionElement.id = `${plotType}-description`;
+    descriptionElement.className = "text-center text-muted";
+    container.appendChild(descriptionElement);
+  }
 
   // Update the description text
   descriptionElement.textContent = descriptionText;
@@ -110,7 +123,6 @@ function loadJSONData(callback) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-
   // Initial description setup
   createOrUpdateDescription("histogram", "traffic_volume");
   createOrUpdateDescription("scatter", "temp");
