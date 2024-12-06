@@ -92,7 +92,7 @@ function loadCSVData(callback) {
     callback(csvData);
   } else {
     d3.csv(
-      "https://raw.githubusercontent.com/madu12/metro-interstate-traffic-volume/refs/heads/main/output_data.csv"
+      "https://raw.githubusercontent.com/madu12/metro-interstate-traffic-volume/refs/heads/main/data/output_data.csv"
     ).then((loadedData) => {
       csvData = loadedData.map((d) => ({
         traffic_volume: +d.traffic_volume,
@@ -114,7 +114,7 @@ function loadJSONData(callback) {
     callback(jsonData);
   } else {
     d3.json(
-      "https://raw.githubusercontent.com/madu12/metro-interstate-traffic-volume/refs/heads/main/hierarchical_traffic_data.json"
+      "https://raw.githubusercontent.com/madu12/metro-interstate-traffic-volume/refs/heads/main/data/hierarchical_traffic_data.json"
     ).then((loadedData) => {
       jsonData = loadedData;
       callback(jsonData);
