@@ -527,8 +527,10 @@ function renderTimeSeries(data) {
 
 // Function to render the Sunburst plot
 function renderSunburst(data) {
+  // Defines the radius scale for the sunburst
   const radius = width / 12;
 
+  // Create the arc generator to calculate path shapes
   const arc = d3
     .arc()
     .startAngle((d) => d.x0)
@@ -538,10 +540,13 @@ function renderSunburst(data) {
     .innerRadius((d) => d.y0 * radius)
     .outerRadius((d) => Math.max(d.y0 * radius, d.y1 * radius - 1));
 
+  // Define a color scale for the chart
   const color = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, 10));
 
+  // Format numbers for tooltips
   const format = d3.format(",d");
 
+  // Function to compute the hierarchical partition
   const partition = (data) => {
     const root = d3
       .hierarchy(data)
@@ -553,6 +558,7 @@ function renderSunburst(data) {
   const root = partition(data);
   root.each((d) => (d.current = d));
 
+  // Create the SVG container
   const svg = d3
     .select("#sunburst")
     .append("svg")
@@ -562,6 +568,7 @@ function renderSunburst(data) {
 
   const g = svg.append("g").attr("transform", `translate(${width / 2},300)`);
 
+  // Create the paths for each node in the hierarchy
   const path = g
     .append("g")
     .selectAll("path")
@@ -578,11 +585,13 @@ function renderSunburst(data) {
     .on("mouseover", mouseover)
     .on("mouseout", mouseleave);
 
+  // Enable click interaction for nodes with children
   path
     .filter((d) => d.children)
     .style("cursor", "pointer")
     .on("click", clicked);
 
+  // Add labels for nodes
   const label = g
     .append("g")
     .attr("pointer-events", "none")
@@ -596,6 +605,7 @@ function renderSunburst(data) {
     .attr("transform", (d) => labelTransform(d.current))
     .text((d) => d.data.name);
 
+  // Add a central circle for navigation to parent
   const parent = g
     .append("circle")
     .datum(root)
@@ -604,6 +614,7 @@ function renderSunburst(data) {
     .attr("pointer-events", "all")
     .on("click", clicked);
 
+  // Click handler for zooming into a node
   function clicked(event, p) {
     parent.datum(p.parent || root);
 
@@ -623,6 +634,7 @@ function renderSunburst(data) {
         })
     );
 
+    // Smooth transition for zooming
     const t = g.transition().duration(750);
 
     path
@@ -648,6 +660,7 @@ function renderSunburst(data) {
       .attrTween("transform", (d) => () => labelTransform(d.current));
   }
 
+  // Mouseover handler for tooltips and highlighting
   function mouseover(event, d) {
     if (
       (d.depth === 1 && arcVisible(d.current)) ||
@@ -670,19 +683,23 @@ function renderSunburst(data) {
     }
   }
 
+  // Mouseleave handler to reset styles
   function mouseleave() {
     tooltip.style("opacity", 0);
     d3.selectAll("path").style("opacity", 1);
   }
 
+  // Helper to determine if an arc is visible
   function arcVisible(d) {
     return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
   }
 
+  // Helper to determine if a label is visible
   function labelVisible(d) {
     return d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03;
   }
 
+  // Helper to calculate label positions
   function labelTransform(d) {
     const x = ((d.x0 + d.x1) / 2) * (180 / Math.PI);
     const y = ((d.y0 + d.y1) / 2) * radius;
