@@ -1,5 +1,5 @@
 // Chart dimensions and margins
-const width = 800;
+const width = 1200;
 const height = 400;
 const margin = { top: 30, right: 30, bottom: 50, left: 60 };
 
@@ -216,7 +216,7 @@ function renderHistogram(variable, data) {
     .on("mouseover", (event, d) => {
       tooltip.transition().duration(200).style("opacity", 0.9);
       tooltip
-        .html(`Count: ${d.length}`)
+        .html(`Bin: ${d.x0.toFixed(2)}<br>Count: ${d.length}`)
         .style("left", event.pageX + 5 + "px")
         .style("top", event.pageY - 28 + "px");
     })
