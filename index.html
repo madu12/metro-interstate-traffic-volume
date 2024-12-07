@@ -106,6 +106,20 @@
       <!-- Time Series Plot Tab -->
       <div class="tab-pane fade chart-container" id="time_series-tab-content" role="tabpanel"
         aria-labelledby="time_series-tab">
+        <div class="row gx-3 gy-2 align-items-center mb-3">
+          <div class="col-auto">
+            <label for="time_series-level-select">Aggregate By:</label>
+          </div>
+          <div class="col-auto">
+            <select id="time_series-level-select" class="form-select">
+              <option value="day">Daily</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="year">Yearly</option>
+            </select>
+          </div>
+        </div>
+        
         <h5 class="text-center" id="time_series-title">Time Series Plot: Daily Traffic Volume</h5>
         <div class="text-center" id="time_series"></div>
       </div>

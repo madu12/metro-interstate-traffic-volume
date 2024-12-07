@@ -46,6 +46,15 @@ const plotDescriptions = {
   time_series: {
     default:
       "This time series plot shows the trend of daily traffic volume over time.",
+      variables: {
+        day: "This time series plot shows the trend of daily traffic volume over time.",
+        month:
+          "This time series plot shows the trend of monthly traffic volume over time.",
+        quarter:
+          "This time series plot shows the trend of quarterly traffic volume over time.",
+        year:
+         "This time series plot shows the trend of yearly traffic volume over time.",
+      },
   },
   sunburst: {
     default:
@@ -57,7 +66,7 @@ const plotDescriptions = {
 function createOrUpdateDescription(plotType, variable = null) {
   let descriptionText = "";
 
-  if (plotType === "histogram" || plotType === "scatter") {
+  if (plotType === "histogram" || plotType === "scatter" || plotType === "time_series") {
     descriptionText =
       plotDescriptions[plotType].variables[variable] ||
       plotDescriptions[plotType].default;
@@ -126,7 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initial description setup
   createOrUpdateDescription("histogram", "traffic_volume");
   createOrUpdateDescription("scatter", "temp");
-  createOrUpdateDescription("time_series");
+  createOrUpdateDescription("time_series", 'day');
   createOrUpdateDescription("sunburst");
 
   // Initial render for the first tab (Histogram)
@@ -160,6 +169,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const selectedVariable = d3.select(this).property("value");
     loadCSVData((data) => renderScatter(selectedVariable, data));
     createOrUpdateDescription("scatter", selectedVariable);
+  });
+
+  // Dropdown change for Time Series Plot
+  d3.select("#time_series-level-select").on("change", function () {
+    const selectedVariable = d3.select(this).property("value");
+    loadCSVData((data) => renderTimeSeries(data, selectedVariable));
+    createOrUpdateDescription("time_series", selectedVariable);
   });
 });
 
@@ -377,14 +393,63 @@ function renderScatter(xVariable, data) {
 }
 
 // Function to render the time series plot
-function renderTimeSeries(data) {
-  // Aggregate the data by day
-  const aggregatedData = d3.rollup(
-    data,
-    (v) => d3.sum(v, (d) => d.traffic_volume),
-    (d) => d3.timeDay(d.date_time)
-  );
+function renderTimeSeries(data, level = "day") {
+  
+  const dropdownText = d3
+    .select("#time_series-level-select option:checked")
+    .text();
 
+    d3.select("#time_series-title").text(
+      `Time Series Plot: ${dropdownText} Traffic Volume`
+    );
+
+  // Aggregate data based on the selected level
+  let aggregatedData;
+  let tooltipFormat;
+  let xTickFormat = null;
+  let tickInterval = null;
+
+  if (level === "day") {
+    aggregatedData = d3.rollup(
+      data,
+      (v) => d3.sum(v, (d) => d.traffic_volume),
+      (d) => d3.timeDay(d.date_time)
+    );
+    tooltipFormat = "%Y-%m-%d";
+  }else if (level === "month") {
+    aggregatedData = d3.rollup(
+      data,
+      (v) => d3.sum(v, (d) => d.traffic_volume),
+      (d) => d3.timeMonth(d.date_time)
+    );
+    tooltipFormat = "%Y-%m";
+  }else if (level === "quarter") {
+    aggregatedData = d3.rollup(
+      data,
+      (v) => d3.sum(v, (d) => d.traffic_volume),
+      (d) => {
+        const date = d.date_time;
+        const quarterStart = new Date(
+          date.getFullYear(),
+          Math.floor(date.getMonth() / 3) * 3,
+          1
+        );
+        return quarterStart;
+      }
+    );
+    tooltipFormat = "%Y-Q%q";
+    xTickFormat = d3.timeFormat("Q%q %Y"); 
+    tickInterval = d3.timeMonth.every(3)
+  }else if (level === "year") {
+    aggregatedData = d3.rollup(
+      data,
+      (v) => d3.sum(v, (d) => d.traffic_volume),
+      (d) => d3.timeYear(d.date_time)
+    );
+    tooltipFormat = "%Y";
+    xTickFormat = d3.timeFormat("%Y"); 
+    tickInterval = d3.timeYear.every(1)
+  }
   const dailyData = Array.from(aggregatedData, ([key, value]) => ({
     date: key,
     traffic_volume: value,
@@ -428,7 +493,8 @@ function renderTimeSeries(data) {
     .call(
       d3
         .axisBottom(x)
-        .ticks(width / 80)
+        .tickFormat(xTickFormat)
+        .ticks(tickInterval ? d3.timeDay.every(tickInterval) : width / 80)
         .tickSizeOuter(0)
     )
     .call((g) =>
@@ -438,7 +504,7 @@ function renderTimeSeries(data) {
         .attr("y", margin.bottom - 4)
         .attr("fill", "currentColor")
         .attr("text-anchor", "end")
-        .text(`Date →`)
+        .text(`${dropdownText} →`)
     );
 
   // Add the y-axis and label
@@ -453,7 +519,7 @@ function renderTimeSeries(data) {
         .attr("y", 10)
         .attr("fill", "currentColor")
         .attr("text-anchor", "start")
-        .text("↑ Daily Traffic Volume")
+        .text(`↑ ${dropdownText} Traffic Volume`)
     );
 
   // Append a path for the line
@@ -507,11 +573,11 @@ function renderTimeSeries(data) {
     .on("mouseover", (event, d) => {
       tooltip.transition().duration(200).style("opacity", 0.9);
       tooltip
-        .html(
-          `Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>Traffic Volume: ${
-            d.traffic_volume
-          }`
-        )
+      .html(
+        `Date: ${d3.timeFormat(tooltipFormat)(d.date)}<br>Traffic Volume: ${
+          d.traffic_volume
+        }`
+      )
         .style("left", event.pageX + 5 + "px")
         .style("top", event.pageY - 28 + "px");
     })
@@ -563,7 +629,7 @@ function renderSunburst(data) {
     .select("#sunburst")
     .append("svg")
     .attr("viewBox", [0, 0, width, width * 0.7])
-    .style("margin-top", margin.top)
+    .style("margin-top", '50px')
     .style("font", "12px sans-serif");
 
   const g = svg.append("g").attr("transform", `translate(${width / 2},300)`);
