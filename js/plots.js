@@ -204,6 +204,23 @@ function renderHistogram(variable, data) {
     .call(d3.axisLeft(y));
 
   svg
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", height - margin.bottom / 5)
+    .attr("text-anchor", "middle")
+    .attr("class", "axis-label")
+    .text(`${dropdownText}`);
+
+  svg
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", margin.left / 5)
+    .attr("text-anchor", "middle")
+    .attr("class", "axis-label")
+    .text(`Frequency`);
+
+  svg
     .selectAll("rect")
     .data(bins)
     .enter()
@@ -256,6 +273,23 @@ function renderScatter(xVariable, data) {
     .append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y));
+
+  svg
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", height - margin.bottom / 5)
+    .attr("text-anchor", "middle")
+    .attr("class", "axis-label")
+    .text(`${dropdownText}`);
+
+  svg
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", margin.left / 5)
+    .attr("text-anchor", "middle")
+    .attr("class", "axis-label")
+    .text(`Traffic Volume`);
 
   svg
     .selectAll("circle")
@@ -342,6 +376,23 @@ function renderTimeSeries(data) {
     .attr("d", line);
 
   svg
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", height - margin.bottom / 5)
+    .attr("text-anchor", "middle")
+    .attr("class", "axis-label")
+    .text(`Date`);
+
+  svg
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .attr("y", margin.left / 5)
+    .attr("text-anchor", "middle")
+    .attr("class", "axis-label")
+    .text(`Traffic Volume`);
+
+  svg
     .selectAll("circle")
     .data(dailyData)
     .enter()
@@ -374,7 +425,7 @@ function renderTimeSeries(data) {
 
 // Function to render the Sunburst plot
 function renderSunburst(data) {
-  const radius = width / 10;
+  const radius = width / 12;
 
   const arc = d3
     .arc()
