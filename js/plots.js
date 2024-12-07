@@ -1,6 +1,6 @@
 // Chart dimensions and margins
 const width = 1200;
-const height = 400;
+const height = 500;
 const margin = { top: 30, right: 30, bottom: 50, left: 60 };
 
 const tooltip = d3
@@ -165,141 +165,203 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Function to render the histogram
 function renderHistogram(variable, data) {
+  // Clear existing histogram content
   d3.select("#histogram").html("");
+
   const dropdownText = d3
     .select("#histogram-variable-select option:checked")
     .text();
   d3.select("#histogram-title").text(`Histogram of ${dropdownText}`);
 
-  const svg = d3
-    .select("#histogram")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", height);
+  // Bin the data
+  const bins = d3
+    .bin()
+    .thresholds(40)
+    .value((d) => d[variable])(data);
 
+  // Declare x (horizontal) scale
   const x = d3
     .scaleLinear()
-    .domain(d3.extent(data, (d) => d[variable]))
+    .domain([bins[0].x0, bins[bins.length - 1].x1])
+    .nice()
     .range([margin.left, width - margin.right]);
 
-  const bins = d3
-    .histogram()
-    .value((d) => d[variable])
-    .domain(x.domain())
-    .thresholds(30)(data);
-
+  // Declare y (vertical) scale
   const y = d3
     .scaleLinear()
     .domain([0, d3.max(bins, (d) => d.length)])
+    .nice()
     .range([height - margin.bottom, margin.top]);
 
+  // Create the SVG container
+  const svg = d3
+    .select("#histogram")
+    .append("svg")
+    .attr("viewBox", [0, 0, width, height])
+    .attr("style", "max-width: 100%; height: auto;");
+
+  // Add bars for each bin
   svg
     .append("g")
-    .attr("transform", `translate(0,${height - margin.bottom})`)
-    .call(d3.axisBottom(x));
-
-  svg
-    .append("g")
-    .attr("transform", `translate(${margin.left},0)`)
-    .call(d3.axisLeft(y));
-
-  svg
-    .append("text")
-    .attr("x", width / 2)
-    .attr("y", height - margin.bottom / 5)
-    .attr("text-anchor", "middle")
-    .attr("class", "axis-label")
-    .text(`${dropdownText}`);
-
-  svg
-    .append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -height / 2)
-    .attr("y", margin.left / 5)
-    .attr("text-anchor", "middle")
-    .attr("class", "axis-label")
-    .text(`Frequency`);
-
-  svg
+    .attr("fill", "steelblue")
     .selectAll("rect")
     .data(bins)
-    .enter()
-    .append("rect")
-    .attr("x", (d) => x(d.x0))
-    .attr("y", (d) => y(d.length))
+    .join("rect")
+    .attr("x", (d) => x(d.x0) + 1)
     .attr("width", (d) => x(d.x1) - x(d.x0) - 1)
-    .attr("height", (d) => height - margin.bottom - y(d.length))
-    .attr("fill", "steelblue")
+    .attr("y", (d) => y(d.length))
+    .attr("height", (d) => y(0) - y(d.length))
     .on("mouseover", (event, d) => {
       tooltip.transition().duration(200).style("opacity", 0.9);
       tooltip
-        .html(`Bin: ${d.x0.toFixed(2)}<br>Count: ${d.length}`)
+        .html(`Bin: ${d.x0} - ${d.x1}<br>Count: ${d.length}`)
         .style("left", event.pageX + 5 + "px")
         .style("top", event.pageY - 28 + "px");
     })
     .on("mouseout", () =>
       tooltip.transition().duration(500).style("opacity", 0)
     );
+
+  // Add the x-axis and label
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${height - margin.bottom})`)
+    .call(
+      d3
+        .axisBottom(x)
+        .ticks(width / 80)
+        .tickSizeOuter(0)
+    )
+    .call((g) =>
+      g
+        .append("text")
+        .attr("x", width)
+        .attr("y", margin.bottom - 4)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "end")
+        .text(`${dropdownText} (bin) →`)
+    );
+
+  // Add the y-axis and label
+  svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y).ticks(height / 40))
+    .call((g) =>
+      g
+        .append("text")
+        .attr("x", -margin.left)
+        .attr("y", 10)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "start")
+        .text(`↑ Count of ${dropdownText}`)
+    );
 }
 
 // Function to render the scatter plot
 function renderScatter(xVariable, data) {
+  // Clear existing scatterplot content
   d3.select("#scatter").html("");
+
   const dropdownText = d3.select("#scatter-x-select option:checked").text();
   d3.select("#scatter-title").text(
     `Scatter Plot: ${dropdownText} vs Traffic Volume`
   );
 
-  const svg = d3
-    .select("#scatter")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", height);
-
+  // Declare x (horizontal) scale
   const x = d3
     .scaleLinear()
     .domain(d3.extent(data, (d) => d[xVariable]))
+    .nice()
     .range([margin.left, width - margin.right]);
+
+  // Declare y (vertical) scale
   const y = d3
     .scaleLinear()
     .domain(d3.extent(data, (d) => d.traffic_volume))
+    .nice()
     .range([height - margin.bottom, margin.top]);
 
+  // Create the SVG container
+  const svg = d3
+    .select("#scatter")
+    .append("svg")
+    .attr("viewBox", [0, 0, width, height])
+    .attr("style", "max-width: 100%; height: auto;");
+
+  // Add the x-axis and label
   svg
     .append("g")
     .attr("transform", `translate(0,${height - margin.bottom})`)
-    .call(d3.axisBottom(x));
+    .call(
+      d3
+        .axisBottom(x)
+        .ticks(width / 80)
+        .tickSizeOuter(0)
+    )
+    .call((g) =>
+      g
+        .append("text")
+        .attr("x", width)
+        .attr("y", margin.bottom - 4)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "end")
+        .text(`${dropdownText} →`)
+    );
+
+  // Add the y-axis and label
   svg
     .append("g")
     .attr("transform", `translate(${margin.left},0)`)
-    .call(d3.axisLeft(y));
+    .call(d3.axisLeft(y).ticks(height / 40))
+    .call((g) =>
+      g
+        .append("text")
+        .attr("x", -margin.left)
+        .attr("y", 10)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "start")
+        .text(`↑ Traffic Volume`)
+    );
 
+  // Add grid lines
   svg
-    .append("text")
-    .attr("x", width / 2)
-    .attr("y", height - margin.bottom / 5)
-    .attr("text-anchor", "middle")
-    .attr("class", "axis-label")
-    .text(`${dropdownText}`);
+    .append("g")
+    .attr("stroke", "currentColor")
+    .attr("stroke-opacity", 0.1)
+    .call((g) =>
+      g
+        .append("g")
+        .selectAll("line")
+        .data(x.ticks())
+        .join("line")
+        .attr("x1", (d) => 0.5 + x(d))
+        .attr("x2", (d) => 0.5 + x(d))
+        .attr("y1", margin.top)
+        .attr("y2", height - margin.bottom)
+    )
+    .call((g) =>
+      g
+        .append("g")
+        .selectAll("line")
+        .data(y.ticks())
+        .join("line")
+        .attr("y1", (d) => 0.5 + y(d))
+        .attr("y2", (d) => 0.5 + y(d))
+        .attr("x1", margin.left)
+        .attr("x2", width - margin.right)
+    );
 
+  // Add dots for the scatterplot
   svg
-    .append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -height / 2)
-    .attr("y", margin.left / 5)
-    .attr("text-anchor", "middle")
-    .attr("class", "axis-label")
-    .text(`Traffic Volume`);
-
-  svg
+    .append("g")
+    .attr("fill", "orange")
     .selectAll("circle")
     .data(data)
-    .enter()
-    .append("circle")
+    .join("circle")
     .attr("cx", (d) => x(d[xVariable]))
     .attr("cy", (d) => y(d.traffic_volume))
     .attr("r", 5)
-    .attr("fill", "orange")
     .on("mouseover", (event, d) => {
       tooltip.transition().duration(200).style("opacity", 0.9);
       tooltip
@@ -316,6 +378,7 @@ function renderScatter(xVariable, data) {
 
 // Function to render the time series plot
 function renderTimeSeries(data) {
+  // Aggregate the data by day
   const aggregatedData = d3.rollup(
     data,
     (v) => d3.sum(v, (d) => d.traffic_volume),
@@ -327,30 +390,38 @@ function renderTimeSeries(data) {
     traffic_volume: value,
   }));
 
+  // Clear existing content
   d3.select("#time_series").html("");
 
+  // Declare the x (horizontal position) scale
   const x = d3
-    .scaleUtc()
-    .domain(d3.extent(dailyData, (d) => d.date))
-    .range([margin.left, width - margin.right]);
+    .scaleUtc(
+      d3.extent(dailyData, (d) => d.date),
+      [margin.left, width - margin.right]
+    )
+    .nice();
 
+  // Declare the y (vertical position) scale
   const y = d3
     .scaleLinear()
-    .domain([0, d3.max(dailyData, (d) => d.traffic_volume)])
+    .domain(d3.extent(dailyData, (d) => d.traffic_volume))
     .nice()
     .range([height - margin.bottom, margin.top]);
 
+  // Declare the line generator
   const line = d3
     .line()
     .x((d) => x(d.date))
     .y((d) => y(d.traffic_volume));
 
+  // Create the SVG container
   const svg = d3
     .select("#time_series")
     .append("svg")
-    .attr("width", width)
-    .attr("height", height);
+    .attr("viewBox", [0, 0, width, height])
+    .attr("style", "max-width: 100%; height: auto;");
 
+  // Add the x-axis
   svg
     .append("g")
     .attr("transform", `translate(0,${height - margin.bottom})`)
@@ -359,14 +430,33 @@ function renderTimeSeries(data) {
         .axisBottom(x)
         .ticks(width / 80)
         .tickSizeOuter(0)
+    )
+    .call((g) =>
+      g
+        .append("text")
+        .attr("x", width)
+        .attr("y", margin.bottom - 4)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "end")
+        .text(`Date →`)
     );
 
+  // Add the y-axis and label
   svg
     .append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y).ticks(height / 40))
-    .call((g) => g.select(".domain").remove());
+    .call((g) =>
+      g
+        .append("text")
+        .attr("x", -margin.left)
+        .attr("y", 10)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "start")
+        .text("↑ Daily Traffic Volume")
+    );
 
+  // Append a path for the line
   svg
     .append("path")
     .datum(dailyData)
@@ -375,23 +465,35 @@ function renderTimeSeries(data) {
     .attr("stroke-width", 1.5)
     .attr("d", line);
 
+  // Add grid lines
   svg
-    .append("text")
-    .attr("x", width / 2)
-    .attr("y", height - margin.bottom / 5)
-    .attr("text-anchor", "middle")
-    .attr("class", "axis-label")
-    .text(`Date`);
+    .append("g")
+    .attr("stroke", "currentColor")
+    .attr("stroke-opacity", 0.1)
+    .call((g) =>
+      g
+        .append("g")
+        .selectAll("line")
+        .data(x.ticks())
+        .join("line")
+        .attr("x1", (d) => 0.5 + x(d))
+        .attr("x2", (d) => 0.5 + x(d))
+        .attr("y1", margin.top)
+        .attr("y2", height - margin.bottom)
+    )
+    .call((g) =>
+      g
+        .append("g")
+        .selectAll("line")
+        .data(y.ticks())
+        .join("line")
+        .attr("y1", (d) => 0.5 + y(d))
+        .attr("y2", (d) => 0.5 + y(d))
+        .attr("x1", margin.left)
+        .attr("x2", width - margin.right)
+    );
 
-  svg
-    .append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -height / 2)
-    .attr("y", margin.left / 5)
-    .attr("text-anchor", "middle")
-    .attr("class", "axis-label")
-    .text(`Traffic Volume`);
-
+  // Add a layer of points for tooltip interaction.
   svg
     .selectAll("circle")
     .data(dailyData)
