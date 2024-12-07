@@ -1,6 +1,6 @@
 // Chart dimensions and margins
 const width = 1200;
-const height = 500;
+const height = 400;
 const margin = { top: 30, right: 30, bottom: 50, left: 60 };
 
 const tooltip = d3
@@ -557,7 +557,8 @@ function renderSunburst(data) {
     .select("#sunburst")
     .append("svg")
     .attr("viewBox", [0, 0, width, width * 0.7])
-    .style("font", "8px sans-serif");
+    .style("margin-top", margin.top)
+    .style("font", "12px sans-serif");
 
   const g = svg.append("g").attr("transform", `translate(${width / 2},300)`);
 
