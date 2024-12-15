@@ -47,8 +47,8 @@
           type="button" role="tab" aria-controls="histogram-tab-content" aria-selected="true">Histogram Plot</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="scatter-tab" data-bs-toggle="tab" data-bs-target="#scatter-tab-content"
-          type="button" role="tab" aria-controls="scatter-tab-content" aria-selected="false">Scatter Plot</button>
+        <button class="nav-link" id="weather_scatter-tab" data-bs-toggle="tab" data-bs-target="#weather_scatter-tab-content"
+          type="button" role="tab" aria-controls="weather_scatter-tab-content" aria-selected="false">Weather Scatter Plot</button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="time_series-tab" data-bs-toggle="tab" data-bs-target="#time_series-tab-content"
@@ -85,13 +85,13 @@
       </div>
 
       <!-- Scatter Plot Tab -->
-      <div class="tab-pane fade chart-container" id="scatter-tab-content" role="tabpanel" aria-labelledby="scatter-tab">
+      <div class="tab-pane fade chart-container" id="weather_scatter-tab-content" role="tabpanel" aria-labelledby="weather_scatter-tab">
         <form class="row gx-3 gy-2 align-items-center mb-3">
           <div class="col-auto">
-            <label for="scatter-x-select">Analyze Traffic Trends With:</label>
+            <label for="weather_scatter-x-select">Analyze Traffic Trends With:</label>
           </div>
           <div class="col-auto">
-            <select id="scatter-x-select" class="form-select">
+            <select id="weather_scatter-x-select" class="form-select">
               <option value="temp">Temperature</option>
               <option value="rain_1h">Rainfall (In Hour)</option>
               <option value="snow_1h">Snowfall (In Hour)</option>
@@ -99,8 +99,8 @@
             </select>
           </div>
         </form>
-        <h5 class="text-center" id="scatter-title">Scatter Plot: Temperature vs Traffic Volume</h5>
-        <div class="text-center" id="scatter"></div>
+        <h5 class="text-center" id="weather_scatter-title">Weather Scatter Plot: Temperature vs Traffic Volume</h5>
+        <div class="text-center" id="weather_scatter"></div>
       </div>
 
       <!-- Time Series Plot Tab -->

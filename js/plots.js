@@ -30,7 +30,7 @@ const plotDescriptions = {
         "This histogram displays traffic volume variations based on cloud cover percentage.",
     },
   },
-  scatter: {
+  weather_scatter: {
     default:
       "This scatter plot shows the relationship between traffic volume and a selected variable.",
     variables: {
@@ -66,7 +66,7 @@ const plotDescriptions = {
 function createOrUpdateDescription(plotType, variable = null) {
   let descriptionText = "";
 
-  if (plotType === "histogram" || plotType === "scatter" || plotType === "time_series") {
+  if (plotType === "histogram" || plotType === "weather_scatter" || plotType === "time_series") {
     descriptionText =
       plotDescriptions[plotType].variables[variable] ||
       plotDescriptions[plotType].default;
@@ -134,7 +134,7 @@ function loadJSONData(callback) {
 document.addEventListener("DOMContentLoaded", () => {
   // Initial description setup
   createOrUpdateDescription("histogram", "traffic_volume");
-  createOrUpdateDescription("scatter", "temp");
+  createOrUpdateDescription("weather_scatter", "temp");
   createOrUpdateDescription("time_series", 'day');
   createOrUpdateDescription("sunburst");
 
@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const targetTab = event.target.id;
       if (targetTab === "histogram-tab") {
         loadCSVData((data) => renderHistogram("traffic_volume", data));
-      } else if (targetTab === "scatter-tab") {
+      } else if (targetTab === "weather_scatter-tab") {
         loadCSVData((data) => renderScatter("temp", data));
       } else if (targetTab === "time_series-tab") {
         loadCSVData((data) => renderTimeSeries(data));
@@ -165,10 +165,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Dropdown change for Scatter Plot
-  d3.select("#scatter-x-select").on("change", function () {
+  d3.select("#weather_scatter-x-select").on("change", function () {
     const selectedVariable = d3.select(this).property("value");
     loadCSVData((data) => renderScatter(selectedVariable, data));
-    createOrUpdateDescription("scatter", selectedVariable);
+    createOrUpdateDescription("weather_scatter", selectedVariable);
   });
 
   // Dropdown change for Time Series Plot
@@ -277,11 +277,11 @@ function renderHistogram(variable, data) {
 // Function to render the scatter plot
 function renderScatter(xVariable, data) {
   // Clear existing scatterplot content
-  d3.select("#scatter").html("");
+  d3.select("#weather_scatter").html("");
 
-  const dropdownText = d3.select("#scatter-x-select option:checked").text();
-  d3.select("#scatter-title").text(
-    `Scatter Plot: ${dropdownText} vs Traffic Volume`
+  const dropdownText = d3.select("#weather_scatter-x-select option:checked").text();
+  d3.select("#weather_scatter-title").text(
+    `Weather Scatter Plot: ${dropdownText} vs Traffic Volume`
   );
 
   // Declare x (horizontal) scale
@@ -300,7 +300,7 @@ function renderScatter(xVariable, data) {
 
   // Create the SVG container
   const svg = d3
-    .select("#scatter")
+    .select("#weather_scatter")
     .append("svg")
     .attr("viewBox", [0, 0, width, height])
     .attr("style", "max-width: 100%; height: auto;");
