@@ -51,6 +51,12 @@
           type="button" role="tab" aria-controls="weather_scatter-tab-content" aria-selected="false">Weather Scatter Plot</button>
       </li>
       <li class="nav-item" role="presentation">
+        <button class="nav-link" id="date_scatter-tab" data-bs-toggle="tab" data-bs-target="#date_scatter-tab-content"
+          type="button" role="tab" aria-controls="date_scatter-tab-content" aria-selected="false">
+          Daily Traffic Volume Scatter Plot
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
         <button class="nav-link" id="time_series-tab" data-bs-toggle="tab" data-bs-target="#time_series-tab-content"
           type="button" role="tab" aria-controls="time_series-tab-content" aria-selected="false">Time Series
           Plot</button>
@@ -84,7 +90,7 @@
         <div class="text-center" id="histogram"></div>
       </div>
 
-      <!-- Scatter Plot Tab -->
+      <!-- Weather Scatter Plot Tab -->
       <div class="tab-pane fade chart-container" id="weather_scatter-tab-content" role="tabpanel" aria-labelledby="weather_scatter-tab">
         <form class="row gx-3 gy-2 align-items-center mb-3">
           <div class="col-auto">
@@ -101,6 +107,16 @@
         </form>
         <h5 class="text-center" id="weather_scatter-title">Weather Scatter Plot: Temperature vs Traffic Volume</h5>
         <div class="text-center" id="weather_scatter"></div>
+      </div>
+
+      <!-- Date Scatter Plot Tab -->
+      <div class="tab-pane fade chart-container" id="date_scatter-tab-content" role="tabpanel"
+        aria-labelledby="date_scatter-tab">
+        <h5 class="text-center" id="date_scatter-title">Daily Traffic Volume Scatter Plot: Date vs Traffic Volume </h5>
+        <div class="text-center" id="date_scatter"></div>
+        <p class="text-center text-muted">This scatter plot visualizes the total traffic volume recorded each day. Hover over the points for more details.
+        </p>
+
       </div>
 
       <!-- Time Series Plot Tab -->

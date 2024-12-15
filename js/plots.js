@@ -46,15 +46,14 @@ const plotDescriptions = {
   time_series: {
     default:
       "This time series plot shows the trend of daily traffic volume over time.",
-      variables: {
-        day: "This time series plot shows the trend of daily traffic volume over time.",
-        month:
-          "This time series plot shows the trend of monthly traffic volume over time.",
-        quarter:
-          "This time series plot shows the trend of quarterly traffic volume over time.",
-        year:
-         "This time series plot shows the trend of yearly traffic volume over time.",
-      },
+    variables: {
+      day: "This time series plot shows the trend of daily traffic volume over time.",
+      month:
+        "This time series plot shows the trend of monthly traffic volume over time.",
+      quarter:
+        "This time series plot shows the trend of quarterly traffic volume over time.",
+      year: "This time series plot shows the trend of yearly traffic volume over time.",
+    },
   },
   sunburst: {
     default:
@@ -66,7 +65,11 @@ const plotDescriptions = {
 function createOrUpdateDescription(plotType, variable = null) {
   let descriptionText = "";
 
-  if (plotType === "histogram" || plotType === "weather_scatter" || plotType === "time_series") {
+  if (
+    plotType === "histogram" ||
+    plotType === "weather_scatter" ||
+    plotType === "time_series"
+  ) {
     descriptionText =
       plotDescriptions[plotType].variables[variable] ||
       plotDescriptions[plotType].default;
@@ -135,7 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initial description setup
   createOrUpdateDescription("histogram", "traffic_volume");
   createOrUpdateDescription("weather_scatter", "temp");
-  createOrUpdateDescription("time_series", 'day');
+  createOrUpdateDescription("time_series", "day");
   createOrUpdateDescription("sunburst");
 
   // Initial render for the first tab (Histogram)
@@ -148,7 +151,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (targetTab === "histogram-tab") {
         loadCSVData((data) => renderHistogram("traffic_volume", data));
       } else if (targetTab === "weather_scatter-tab") {
-        loadCSVData((data) => renderScatter("temp", data));
+        loadCSVData((data) => renderWeatherScatter("temp", data));
+      } else if (targetTab === "date_scatter-tab") {
+        loadCSVData((data) => renderDailyScatter(data));
       } else if (targetTab === "time_series-tab") {
         loadCSVData((data) => renderTimeSeries(data));
       } else if (targetTab === "sunburst-tab") {
@@ -167,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Dropdown change for Scatter Plot
   d3.select("#weather_scatter-x-select").on("change", function () {
     const selectedVariable = d3.select(this).property("value");
-    loadCSVData((data) => renderScatter(selectedVariable, data));
+    loadCSVData((data) => renderWeatherScatter(selectedVariable, data));
     createOrUpdateDescription("weather_scatter", selectedVariable);
   });
 
@@ -274,12 +279,14 @@ function renderHistogram(variable, data) {
     );
 }
 
-// Function to render the scatter plot
-function renderScatter(xVariable, data) {
+// Function to render the weather scatter plot
+function renderWeatherScatter(xVariable, data) {
   // Clear existing scatterplot content
   d3.select("#weather_scatter").html("");
 
-  const dropdownText = d3.select("#weather_scatter-x-select option:checked").text();
+  const dropdownText = d3
+    .select("#weather_scatter-x-select option:checked")
+    .text();
   d3.select("#weather_scatter-title").text(
     `Weather Scatter Plot: ${dropdownText} vs Traffic Volume`
   );
@@ -377,7 +384,7 @@ function renderScatter(xVariable, data) {
     .join("circle")
     .attr("cx", (d) => x(d[xVariable]))
     .attr("cy", (d) => y(d.traffic_volume))
-    .attr("r", 5)
+    .attr("r", 3)
     .on("mouseover", (event, d) => {
       tooltip.transition().duration(200).style("opacity", 0.9);
       tooltip
@@ -392,16 +399,147 @@ function renderScatter(xVariable, data) {
     );
 }
 
+// Function to render the daily scatter plot
+function renderDailyScatter(data) {
+  // Aggregate data to calculate total traffic volume per day
+  const aggregatedData = d3
+    .rollups(
+      data,
+      (v) => d3.sum(v, (d) => d.traffic_volume),
+      (d) => d3.timeDay(d.date_time)
+    )
+    .map(([date, traffic_volume]) => ({ date, traffic_volume }));
+
+  // Clear existing scatterplot content
+  d3.select("#date_scatter").html("");
+
+  // Adjusted margins to fit rotated text
+  const newMargin = { ...margin, bottom: 70 };
+
+  // Set up the x (time) and y (traffic volume) scales
+  const x = d3
+    .scaleTime()
+    .domain(d3.extent(aggregatedData, (d) => d.date))
+    .nice()
+    .range([newMargin.left, width - newMargin.right]);
+
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(aggregatedData, (d) => d.traffic_volume)])
+    .nice()
+    .range([height - newMargin.bottom, newMargin.top]);
+
+  // Create the SVG container
+  const svg = d3
+    .select("#date_scatter")
+    .append("svg")
+    .attr("viewBox", [0, 0, width, height])
+    .attr("style", "max-width: 100%; height: auto; overflow: visible;");
+
+  // Add the x-axis with rotated labels
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${height - newMargin.bottom})`)
+    .call(
+      d3
+        .axisBottom(x)
+        .ticks(d3.timeMonth.every(2))
+        .tickFormat(d3.timeFormat("%b %Y"))
+    )
+    .selectAll("text")
+    .attr("transform", "rotate(-45)")
+    .style("text-anchor", "end")
+    .attr("dx", "-0.8em")
+    .attr("dy", "0.15em");
+
+  // Add x-axis label
+  svg
+    .append("text")
+    .attr("x", width)
+    .attr("y", height - 10)
+    .attr("fill", "currentColor")
+    .attr("text-anchor", "end")
+    .style("font-size", 10)
+    .text("Date →");
+
+  // Add the y-axis and label
+  svg
+    .append("g")
+    .attr("transform", `translate(${newMargin.left},0)`)
+    .call(d3.axisLeft(y))
+    .call((g) =>
+      g
+        .append("text")
+        .attr("x", -newMargin.left)
+        .attr("y", 10)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "start")
+        .text(`↑ Traffic Volume`)
+    );
+
+  // Add grid lines
+  svg
+    .append("g")
+    .attr("stroke", "currentColor")
+    .attr("stroke-opacity", 0.1)
+    .call((g) =>
+      g
+        .append("g")
+        .selectAll("line")
+        .data(x.ticks())
+        .join("line")
+        .attr("x1", (d) => 0.5 + x(d))
+        .attr("x2", (d) => 0.5 + x(d))
+        .attr("y1", margin.top)
+        .attr("y2", height - margin.bottom)
+    )
+    .call((g) =>
+      g
+        .append("g")
+        .selectAll("line")
+        .data(y.ticks())
+        .join("line")
+        .attr("y1", (d) => 0.5 + y(d))
+        .attr("y2", (d) => 0.5 + y(d))
+        .attr("x1", margin.left)
+        .attr("x2", width - margin.right)
+    );
+
+  // Add dots for the scatterplot
+  svg
+    .append("g")
+    .attr("fill", "orange")
+    .selectAll("circle")
+    .data(aggregatedData)
+    .join("circle")
+    .attr("cx", (d) => x(d.date))
+    .attr("cy", (d) => y(d.traffic_volume))
+    .attr("r", 3)
+    .on("mouseover", (event, d) => {
+      tooltip.transition().duration(200).style("opacity", 0.9);
+      tooltip
+        .html(
+          `Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>Traffic Volume: ${
+            d.traffic_volume
+          }`
+        )
+        .style("left", event.pageX + 5 + "px")
+        .style("top", event.pageY - 28 + "px");
+    })
+    .on("mouseout", () =>
+      tooltip.transition().duration(500).style("opacity", 0)
+    );
+}
+
 // Function to render the time series plot
 function renderTimeSeries(data, level = "day") {
-  
   const dropdownText = d3
     .select("#time_series-level-select option:checked")
     .text();
 
-    d3.select("#time_series-title").text(
-      `Time Series Plot: ${dropdownText} Traffic Volume`
-    );
+  d3.select("#time_series-title").text(
+    `Time Series Plot: ${dropdownText} Traffic Volume`
+  );
 
   // Aggregate data based on the selected level
   let aggregatedData;
@@ -416,14 +554,14 @@ function renderTimeSeries(data, level = "day") {
       (d) => d3.timeDay(d.date_time)
     );
     tooltipFormat = "%Y-%m-%d";
-  }else if (level === "month") {
+  } else if (level === "month") {
     aggregatedData = d3.rollup(
       data,
       (v) => d3.sum(v, (d) => d.traffic_volume),
       (d) => d3.timeMonth(d.date_time)
     );
     tooltipFormat = "%Y-%m";
-  }else if (level === "quarter") {
+  } else if (level === "quarter") {
     aggregatedData = d3.rollup(
       data,
       (v) => d3.sum(v, (d) => d.traffic_volume),
@@ -438,17 +576,17 @@ function renderTimeSeries(data, level = "day") {
       }
     );
     tooltipFormat = "%Y-Q%q";
-    xTickFormat = d3.timeFormat("Q%q %Y"); 
-    tickInterval = d3.timeMonth.every(3)
-  }else if (level === "year") {
+    xTickFormat = d3.timeFormat("Q%q %Y");
+    tickInterval = d3.timeMonth.every(3);
+  } else if (level === "year") {
     aggregatedData = d3.rollup(
       data,
       (v) => d3.sum(v, (d) => d.traffic_volume),
       (d) => d3.timeYear(d.date_time)
     );
     tooltipFormat = "%Y";
-    xTickFormat = d3.timeFormat("%Y"); 
-    tickInterval = d3.timeYear.every(1)
+    xTickFormat = d3.timeFormat("%Y");
+    tickInterval = d3.timeYear.every(1);
   }
   const dailyData = Array.from(aggregatedData, ([key, value]) => ({
     date: key,
@@ -573,11 +711,11 @@ function renderTimeSeries(data, level = "day") {
     .on("mouseover", (event, d) => {
       tooltip.transition().duration(200).style("opacity", 0.9);
       tooltip
-      .html(
-        `Date: ${d3.timeFormat(tooltipFormat)(d.date)}<br>Traffic Volume: ${
-          d.traffic_volume
-        }`
-      )
+        .html(
+          `Date: ${d3.timeFormat(tooltipFormat)(d.date)}<br>Traffic Volume: ${
+            d.traffic_volume
+          }`
+        )
         .style("left", event.pageX + 5 + "px")
         .style("top", event.pageY - 28 + "px");
     })
@@ -629,7 +767,7 @@ function renderSunburst(data) {
     .select("#sunburst")
     .append("svg")
     .attr("viewBox", [0, 0, width, width * 0.7])
-    .style("margin-top", '50px')
+    .style("margin-top", "50px")
     .style("font", "12px sans-serif");
 
   const g = svg.append("g").attr("transform", `translate(${width / 2},300)`);
