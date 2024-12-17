@@ -47,8 +47,9 @@
           type="button" role="tab" aria-controls="histogram-tab-content" aria-selected="true">Histogram Plot</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="weather_scatter-tab" data-bs-toggle="tab" data-bs-target="#weather_scatter-tab-content"
-          type="button" role="tab" aria-controls="weather_scatter-tab-content" aria-selected="false">Weather Scatter Plot</button>
+        <button class="nav-link" id="weather_scatter-tab" data-bs-toggle="tab"
+          data-bs-target="#weather_scatter-tab-content" type="button" role="tab"
+          aria-controls="weather_scatter-tab-content" aria-selected="false">Weather Scatter Plot</button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="date_scatter-tab" data-bs-toggle="tab" data-bs-target="#date_scatter-tab-content"
@@ -65,6 +66,15 @@
         <button class="nav-link" id="sunburst-tab" data-bs-toggle="tab" data-bs-target="#sunburst-tab-content"
           type="button" role="tab" aria-controls="sunburst-tab-content" aria-selected="false">Sunburst Chart</button>
       </li>
+
+      <!-- Boxplot Tab -->
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="boxplot-tab" data-bs-toggle="tab" data-bs-target="#boxplot-tab-content"
+          type="button" role="tab" aria-controls="boxplot-tab-content" aria-selected="false">
+          Traffic Volume by Date/Time
+        </button>
+      </li>
+
     </ul>
 
     <!-- Tab content -->
@@ -91,7 +101,8 @@
       </div>
 
       <!-- Weather Scatter Plot Tab -->
-      <div class="tab-pane fade chart-container" id="weather_scatter-tab-content" role="tabpanel" aria-labelledby="weather_scatter-tab">
+      <div class="tab-pane fade chart-container" id="weather_scatter-tab-content" role="tabpanel"
+        aria-labelledby="weather_scatter-tab">
         <form class="row gx-3 gy-2 align-items-center mb-3">
           <div class="col-auto">
             <label for="weather_scatter-x-select">Analyze Traffic Trends With:</label>
@@ -114,7 +125,8 @@
         aria-labelledby="date_scatter-tab">
         <h5 class="text-center" id="date_scatter-title">Daily Traffic Volume Scatter Plot: Date vs Traffic Volume </h5>
         <div class="text-center" id="date_scatter"></div>
-        <p class="text-center text-muted">This scatter plot visualizes the total traffic volume recorded each day. Hover over the points for more details.
+        <p class="text-center text-muted">This scatter plot visualizes the total traffic volume recorded each day. Hover
+          over the points for more details.
         </p>
 
       </div>
@@ -135,7 +147,7 @@
             </select>
           </div>
         </div>
-        
+
         <h5 class="text-center" id="time_series-title">Time Series Plot: Daily Traffic Volume</h5>
         <div class="text-center" id="time_series"></div>
       </div>
@@ -146,6 +158,26 @@
         <h5 class="text-center" id="sunburst-title">Sunburst Chart: Traffic Volume by Year, Month, Day of the Week</h5>
         <div id="sunburst" class="text-center"></div>
       </div>
+
+      <!-- Boxplot Tab -->
+      <div class="tab-pane fade chart-container" id="boxplot-tab-content" role="tabpanel">
+        <form class="row gx-3 gy-2 align-items-center mb-3">
+          <div class="col-auto">
+            <label for="boxplot-variable-select">Group By:</label>
+          </div>
+          <div class="col-auto">
+            <select id="boxplot-variable-select" class="form-select">
+              <option value="time_period">Time of Day</option>
+              <option value="weekday">Day of the Week</option>
+              <option value="month">Month</option>
+              <option value="year">Year</option>
+            </select>
+          </div>
+        </form>
+        <h5 class="text-center" id="boxplot-title">Traffic Volume Grouped by Date/Time</h5>
+        <div class="text-center" id="boxplot"></div>
+      </div>
+
     </div>
   </div>
 

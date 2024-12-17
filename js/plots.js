@@ -59,6 +59,19 @@ const plotDescriptions = {
     default:
       "This sunburst chart breaks down traffic volume by year, month, and day.",
   },
+  boxplot: {
+    default:
+      "This boxplot groups traffic volume into different time periods: Late Night, Early Morning, Morning, Afternoon, Evening, and Night.",
+    variables: {
+      time_period:
+        "This boxplot groups traffic volume into different time periods: Late Night, Early Morning, Morning, Afternoon, Evening, and Night.",
+      weekday:
+        "This boxplot shows how traffic volume varies across weekdays (Sunday to Saturday).",
+      month:
+        "This boxplot displays the monthly distribution of traffic volume.",
+      year: "This boxplot shows the yearly trends in traffic volume.",
+    },
+  },
 };
 
 // Function to dynamically create and update descriptions
@@ -68,7 +81,8 @@ function createOrUpdateDescription(plotType, variable = null) {
   if (
     plotType === "histogram" ||
     plotType === "weather_scatter" ||
-    plotType === "time_series"
+    plotType === "time_series" ||
+    plotType === "boxplot"
   ) {
     descriptionText =
       plotDescriptions[plotType].variables[variable] ||
@@ -140,6 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
   createOrUpdateDescription("weather_scatter", "temp");
   createOrUpdateDescription("time_series", "day");
   createOrUpdateDescription("sunburst");
+  createOrUpdateDescription("boxplot");
 
   // Initial render for the first tab (Histogram)
   loadCSVData((data) => renderHistogram("traffic_volume", data));
@@ -158,6 +173,8 @@ document.addEventListener("DOMContentLoaded", () => {
         loadCSVData((data) => renderTimeSeries(data));
       } else if (targetTab === "sunburst-tab") {
         loadJSONData((data) => renderSunburst(data));
+      } else if (targetTab === "boxplot-tab") {
+        loadCSVData((data) => renderBoxplot("time_period", data));
       }
     });
   });
@@ -181,6 +198,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const selectedVariable = d3.select(this).property("value");
     loadCSVData((data) => renderTimeSeries(data, selectedVariable));
     createOrUpdateDescription("time_series", selectedVariable);
+  });
+
+  // Dropdown change for Box Plot
+  d3.select("#boxplot-variable-select").on("change", function () {
+    const selectedVariable = d3.select(this).property("value");
+    loadCSVData((data) => renderBoxplot(selectedVariable, data));
+    createOrUpdateDescription("boxplot", selectedVariable);
   });
 });
 
@@ -909,4 +933,212 @@ function renderSunburst(data) {
     const y = ((d.y0 + d.y1) / 2) * radius;
     return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
   }
+}
+
+// Function to render the box plot
+function renderBoxplot(groupBy, data) {
+  // Clear existing content
+  d3.select("#boxplot").html("");
+
+  // Update title dynamically
+  const groupText = d3.select("#boxplot-variable-select option:checked").text();
+  d3.select("#boxplot-title").text(`Traffic Volume Grouped by ${groupText}`);
+
+  // Group data based on selected option
+  const groupedData = d3.group(data, (d) => {
+    if (groupBy === "time_period") {
+      const hour = d.date_time.getHours();
+      if (hour < 4) return "Late Night";
+      else if (hour < 8) return "Early Morning";
+      else if (hour < 12) return "Morning";
+      else if (hour < 16) return "Afternoon";
+      else if (hour < 19) return "Evening";
+      else return "Night";
+    } else if (groupBy === "weekday") {
+      return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+        d.date_time.getDay()
+      ];
+    } else if (groupBy === "month") {
+      return d.date_time.getMonth() + 1;
+    } else if (groupBy === "year") {
+      return d.date_time.getFullYear();
+    }
+  });
+
+  const groups = Array.from(groupedData.keys()).sort((a, b) => a - b);
+
+  const boxData = groups
+    .map((group) => {
+      const values =
+        groupedData
+          .get(group)
+          ?.map((d) => d.traffic_volume)
+          .filter((v) => !isNaN(v)) || [];
+      values.sort(d3.ascending);
+      if (values.length === 0) return null;
+
+      const q1 = d3.quantile(values, 0.25);
+      const median = d3.median(values);
+      const q3 = d3.quantile(values, 0.75);
+      const iqr = q3 - q1;
+      const min = Math.max(d3.min(values), q1 - 1.5 * iqr);
+      const max = Math.min(d3.max(values), q3 + 1.5 * iqr);
+
+      const outliers = values.filter(
+        (v) => v < q1 - 1.5 * iqr || v > q3 + 1.5 * iqr
+      );
+
+      return { group, min, q1, median, q3, max, outliers };
+    })
+    .filter((d) => d);
+
+  // Define scales
+  const x = d3
+    .scaleBand()
+    .domain(groups)
+    .range([margin.left, width - margin.right])
+    .padding(0.1);
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(boxData, (d) => d.max)])
+    .nice()
+    .range([height - margin.bottom, margin.top]);
+
+  // Create SVG
+  const svg = d3
+    .select("#boxplot")
+    .append("svg")
+    .attr("viewBox", [0, 0, width, height])
+    .style("max-width", "100%");
+
+  // X-Axis with Label
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${height - margin.bottom})`)
+    .call(d3.axisBottom(x).tickSizeOuter(0))
+    .call((g) =>
+      g
+        .append("text")
+        .attr("x", width)
+        .attr("y", margin.bottom - 4)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "end")
+        .text(`${groupText} →`)
+    );
+
+  // Y-Axis with Label
+  svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y).ticks(height / 40))
+    .call((g) =>
+      g
+        .append("text")
+        .attr("x", -margin.left)
+        .attr("y", 10)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "start")
+        .text(`↑ Traffic Volume`)
+    );
+
+  // Draw Boxes
+  svg
+    .selectAll("rect")
+    .data(boxData)
+    .enter()
+    .append("rect")
+    .attr("x", (d) => x(d.group))
+    .attr("y", (d) => y(d.q3))
+    .attr("height", (d) => y(d.q1) - y(d.q3))
+    .attr("width", x.bandwidth())
+    .attr("fill", "steelblue")
+    .on("mouseover", (event, d) => {
+      tooltip
+        .style("opacity", 1)
+        .html(
+          `<strong>${d.group}</strong><br>
+         Q1: ${d.q1.toFixed(2)}<br>
+         Median: ${d.median.toFixed(2)}<br>
+         Q3: ${d.q3.toFixed(2)}<br>
+         Min: ${d.min.toFixed(2)}<br>
+         Max: ${d.max.toFixed(2)}`
+        )
+        .style("opacity", 0.9)
+        .style("left", event.pageX + 5 + "px")
+        .style("top", event.pageY - 28 + "px");
+    })
+    .on("mousemove", (event) => {
+      tooltip
+        .style("opacity", 0.9)
+        .style("left", event.pageX + 5 + "px")
+        .style("top", event.pageY - 28 + "px");
+    })
+    .on("mouseout", () => {
+      tooltip.style("opacity", 0);
+    });
+  // Median Lines
+  svg
+    .selectAll("line.median")
+    .data(boxData)
+    .enter()
+    .append("line")
+    .attr("x1", (d) => x(d.group) + x.bandwidth() / 2)
+    .attr("x2", (d) => x(d.group) + x.bandwidth() / 2)
+    .attr("y1", (d) => y(d.min))
+    .attr("y2", (d) => y(d.max))
+    .attr("stroke", "black");
+
+  // Draw Whiskers
+  svg
+    .selectAll("line.whisker")
+    .data(boxData)
+    .enter()
+    .append("line")
+    .attr("x1", (d) => x(d.group) + x.bandwidth() / 3)
+    .attr("x2", (d) => x(d.group) + (2 * x.bandwidth()) / 3)
+    .attr("y1", (d) => y(d.min))
+    .attr("y2", (d) => y(d.min))
+    .attr("stroke", "black");
+
+  svg
+    .selectAll("line.whisker")
+    .data(boxData)
+    .enter()
+    .append("line")
+    .attr("x1", (d) => x(d.group) + x.bandwidth() / 3)
+    .attr("x2", (d) => x(d.group) + (2 * x.bandwidth()) / 3)
+    .attr("y1", (d) => y(d.max))
+    .attr("y2", (d) => y(d.max))
+    .attr("stroke", "black");
+
+  // Draw Outliers
+  svg
+    .selectAll("circle.outlier")
+    .data(
+      boxData.flatMap((d) =>
+        d.outliers.map((value) => ({ group: d.group, value }))
+      )
+    )
+    .enter()
+    .append("circle")
+    .attr("cx", (d) => x(d.group) + x.bandwidth() / 2)
+    .attr("cy", (d) => y(d.value))
+    .attr("r", 3)
+    .attr("fill", "red")
+    .on("mouseover", (event, d) => {
+      tooltip
+        .html(`<strong>${d.group}</strong><br>Outlier: ${d.value.toFixed(2)}`)
+        .style("opacity", 0.9)
+        .style("left", event.pageX + 5 + "px")
+        .style("top", event.pageY - 28 + "px");
+    })
+    .on("mousemove", (event) => {
+      tooltip
+        .style("opacity", 0.9)
+        .style("left", event.pageX + 5 + "px")
+        .style("top", event.pageY - 28 + "px");
+    })
+    .on("mouseout", () => {
+      tooltip.style("opacity", 0);
+    });
 }
